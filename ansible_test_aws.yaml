@@ -1,10 +1,21 @@
-# 3 servers, 1 control, 2 slaves
-# functions:
-# 1. update /etc/hosts with ips of all slaves. slave write to s3 file, control read and delete when slave all done
-# 2. functions of bootstraps. install ansible, copy files, install git etc
-# 3. use pem file MyEC2KeyPair.pem for passwordless connections between all servers. change to rsa pair for enhanced security later. 
-# 4. update ansible hosts with /etc/hosts
-# Need to update security group to allow laptop ip access
+Comment: |
+  3 servers: 1 control, 2 slaves, can extend to more
+  Dependecies:
+    1. S3 bucket with pem file, packages, applications
+    2. IAM role for S3 access
+    3. Security group for My IP access only
+    4. Building of control server depends on successful built of slave servers
+
+  Functions:
+    1. build 1 control server and 2 slave servers with all application dependency packages 
+    2. On control, install ansible, git, copy applicaiton packages from private s3 bucket
+    3. Use pem file from private s3 bucket for passwordless connections between all servers. change to rsa pair for enhanced security later.
+    4. Update contorl /etc/hosts with slave IPs
+    5. Need to update security group to allow laptop ip access
+    6. Use AWS cfn-init for cloudformation metadata control
+    7. Control server building depends on slave servers. Automatically roll back if control built fails.
+    8. Output server public IPs in cloudformation IP
+
 
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS Cloudformation template for TrueCall ansible test'
