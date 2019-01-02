@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#sed -i 's/localdomain4/localdomain4 control/' /etc/hosts
+
+ssh-keygen -f ~/.ssh/id_rsa_control -t rsa -N ''
+aws s3 cp ~/.ssh/id_rsa_control.pub s3://ansible-test-kaiyuan
+curl http://169.254.169.254/latest/meta-data/local-ipv4 > host_control;echo " control" >> host_control
+cat host_control >> /etc/hosts
+cat ~/.ssh/id_rsa_control.pub >> ~/.ssh/authorized_keys
+awk '{print "Host "$1}' ~/host_control >> ~/.ssh/config; echo -e "User root\nIdentityFile ~/.ssh/id_rsa_control" >> ~/.ssh/config
+echo -e "Host control\nUser root\nIdentityFile ~/.ssh/id_rsa_control" >> ~/.ssh/config
+
+aws s3 cp host_control s3://ansible-test-kaiyuan
+aws s3 cp s3://ansible-test-kaiyuan/config_control.sh ~
+chmod 777 ~/config_control.sh
+aws s3 cp s3://ansible-test-kaiyuan/ansible_truecall_v17.3_02Nov18.tar.gz ~
+tar -xvzpf ~/ansible_truecall_v17.3_02Nov18.tar.gz -C /opt
+sed -i 's/production$/production_test/g' /opt/ansible/ansible.cfg
+
+aws s3 cp s3://ansible-test-kaiyuan/TrueCall-Server-17.3.0.16-0-gaa28f3b-el7-x86_64.rpm /opt/ansible/roles/tc_install/files 
+aws s3 cp s3://ansible-test-kaiyuan/GSRservices-V7.17.3.0.3_PR_CP23-0_el7.x86_64.rpm /opt/ansible/roles/tc_install/files
+sed -i 's?truecall_rpm:?truecall_rpm: TrueCall-Server-17.3.0.16-0-gaa28f3b-el7-x86_64.rpm?' /opt/ansible/roles/tc_install/vars/main.yml
+sed -i 's?gsrsvcs_rpm:?gsrsvcs_rpm: GSRservices-V7.17.3.0.3_PR_CP23-0_el7.x86_64.rpm?' /opt/ansible/roles/tc_install/vars/main.yml
+
+aws s3 cp s3://ansible-test-kaiyuan/config_ansible_output_aws.zip ~
+unzip -o ~/config_ansible_output_aws.zip -d /opt/ansible/
+
+mkdir /var/lib/truecall
+chmod 777 /var/lib/truecall
+
+yum -y install git
+amazon-linux-extras install ansible2 -y
+#cd /etc/ansible
+#git init
+#aws s3 cp s3://ansible-test-kaiyuan/dev /etc/ansible
+#aws s3 cp s3://ansible-test-kaiyuan/ansible.cfg /etc/ansible
+cd /opt/ansible
+git init
+
+touch ~/init_done
+
+# Install Base System Software
+#yum groupinstall --downloadonly @core @debugging @development @hardware-monitoring @large-systems @performance @postgresql @security-tools @web-server @hardware-monitoring @large-systems @system-admin-tools @system-management @system-management-snmp \
+--setopt=group_package_types=mandatory,default,optional --downloaddir=/root
+yum groupinstall -y @core @debugging @development @hardware-monitoring @large-systems @performance @postgresql @security-tools @web-server @hardware-monitoring @large-systems @system-admin-tools @system-management @system-management-snmp \
+--setopt=group_package_types=mandatory,default,optional
+
+#yum install --downloadonly chrony python-psycopg2 httpd-tools libICE libSM libicu libyaml mailcap python-markupsafe perl-Archive-Zip protobuf libunwind sysfsutils lynx base install htop iftop --downloaddir=/root
+yum install -y chrony python-psycopg2 httpd-tools libICE libSM libicu libyaml mailcap python-markupsafe perl-Archive-Zip protobuf libunwind sysfsutils lynx base install htop iftop \
+ncurses-compat-libs postgresql postgresql-server # @postgresql does not exist
+
+yum update -y
