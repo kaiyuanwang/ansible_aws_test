@@ -1,5 +1,6 @@
-Comment: |
-  3 servers: 1 control, 2 slaves, can extend to more
+Description: >
+  Build 3 servers for ansible test: 
+    1 control, 2 slaves, can extend to more
   Dependecies:
     1. S3 bucket with pem file, packages, applications
     2. IAM role for S3 access
