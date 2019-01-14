@@ -1,5 +1,5 @@
 # ansible_aws_test
-Build 1 control server and multiple slave servers in AWS for ansible test.
+Build one control server and multiple slave servers in AWS for ansible test.
 
 1. Manually build EC2 control and slave servers with bootstraps and scripts after init:
 	

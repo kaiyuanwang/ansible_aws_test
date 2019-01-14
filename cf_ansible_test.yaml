@@ -1,12 +1,11 @@
-Description: >
-  Build 3 servers for ansible test: 
-    1 control, 2 slaves, can extend to more
+Description: |
+  AWS Cloudformation template for TrueCall ansible test
+  1 control, 2 slaves, can extend to more
   Dependecies:
     1. S3 bucket with pem file, packages, applications
     2. IAM role for S3 access
     3. Security group for My IP access only
     4. Building of control server depends on successful built of slave servers
-
   Functions:
     1. build 1 control server and 2 slave servers with all application dependency packages 
     2. On control, install ansible, git, copy applicaiton packages from private s3 bucket
@@ -17,9 +16,7 @@ Description: >
     7. Control server building depends on slave servers. Automatically roll back if control built fails.
     8. Output server public IPs in cloudformation IP
 
-
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Cloudformation template for TrueCall ansible test'
 Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
@@ -251,6 +248,19 @@ Resources:
                 aws s3 cp s3://ansible-test-kaiyuan/${TrueCallPackage} /opt/ansible/roles/tc_install/files
                 aws s3 cp s3://ansible-test-kaiyuan/${GsrPackage} /opt/ansible/roles/tc_install/files
                 #sed -i "s?^truecall_rpm:?truecall_rpm: ${TrueCallPackage}?; s?gsrsvcs_rpm:?gsrsvcs_rpm: ${GsrPackage}?g" /opt/ansible/roles/tc_install/vars/main.yml
+                ####### TEST FOR test.ini.j2 JINJA2 TEMPLATE
+                for f in config.ini_vo{,.logic}.j2; do
+                  aws s3 cp s3://ansible-test-kaiyuan/$f /opt/ansible/roles/tc_install/templates
+                  chmod 777 /opt/ansible/roles/tc_install/templates/$f
+                done
+                mv /opt/ansible/roles/tc_install/tasks/main.yml /opt/ansible/roles/tc_install/tasks/main_org.yml
+                aws s3 cp s3://ansible-test-kaiyuan/test_main.yml /opt/ansible/roles/tc_install/tasks/main.yml
+                mkdir /opt/ansible/group_vars/all/
+                aws s3 cp s3://ansible-test-kaiyuan/default.yml /opt/ansible/group_vars/all/
+                #awk 'NR>1{print}' /opt/ansible/default.yml >> /opt/ansible/group_vars/TrueCall.yml
+                for f in {/opt/ansible/roles/tc_install/tasks/main.yml,/opt/ansible/test_default.yml}; do
+                  chmod 777 $f
+                done
               mode: "000755"
               owner: "root"
               group: "root"
@@ -285,7 +295,7 @@ Resources:
             config_ansible_connections:
               command: 'sed -i "s/production$/production_test/g" /opt/ansible/ansible.cfg; sed -i "s/^control/control ansible_connection=local/g" /opt/ansible/production_test'
             config_etc_hosts:
-              command: 'private_ip=`curl http://169.254.169.254/latest/meta-data/local-ipv4`; sed -i "s/^control$/control ${private_ip} control/g" /etc/hosts'
+              command: 'private_ip=`curl http://169.254.169.254/latest/meta-data/local-ipv4`; sed -i "s/^control$/${private_ip} control/g" /etc/hosts'
             config_ansible_privileges:
               command: |
                 chmod 755 -R /opt/ansible
