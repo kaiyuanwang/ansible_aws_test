@@ -46,14 +46,13 @@ Parameters:
     Type: String
     MinLength: '9'
     MaxLength: '18'
-    Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-  SecurityGroup:
-    Description: Security group used for ansible test
-    Type: String
-    Default: sg-066f4f3e606bef70c
-    ConstraintDescription: must be existing security group
+  #SecurityGroup:
+  #  Description: Security group used for ansible test
+  #  Type: String
+  #  Default: sg-066f4f3e606bef70c
+  #  ConstraintDescription: must be existing security group
   AnsiblePackage:
     Description: ansible package name in s3://ansible-test-kaiyuan bucket
     Type: String
@@ -69,6 +68,10 @@ Parameters:
     Type: String
     Default: GSRservices-V7.17.3.0.3_PR_CP23-0_el7.x86_64.rpm
     ConstraintDescription: must be existing Gsr package file
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Default: vpc-0fa16d5fa89c52bd9
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -77,7 +80,7 @@ Metadata:
           default: "EC2 Configuration"
         Parameters:
           - SSHLocation
-          - SecurityGroup
+          - VpcId
           - InstanceType
       - Label:
           default: "Connection Configuration"
@@ -108,12 +111,33 @@ Mappings:
       HVM64: ami-08589eca6dcc9b39c
 
 Resources:
+  AnsibleTestSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security group for Ansible Test Servers
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !Ref SSHLocation
+          FromPort: '22'
+          ToPort: '22'
+          Description: ssh
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: '80'
+          ToPort: '80'
+          Description: http
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: '8443'
+          ToPort: '8443'
+          Description: https
   SlaveHost1:
     Description: "Ansible Slave host 1"
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref 'InstanceType'
-      SecurityGroupIds: [!Ref 'SecurityGroup']
+      SecurityGroupIds: [!Ref 'AnsibleTestSecurityGroup']
       KeyName: !Ref 'KeyName'
       ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch,
           !Ref 'InstanceType', Arch]]
@@ -137,7 +161,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref 'InstanceType'
-      SecurityGroupIds: [!Ref 'SecurityGroup']
+      SecurityGroupIds: [!Ref 'AnsibleTestSecurityGroup']
       KeyName: !Ref 'KeyName'
       ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch,
           !Ref 'InstanceType', Arch]]
@@ -165,7 +189,7 @@ Resources:
     Properties:
       InstanceType: !Ref 'InstanceType'
       IamInstanceProfile: !Ref 'RoleName'
-      SecurityGroupIds: [!Ref 'SecurityGroup']
+      SecurityGroupIds: [!Ref 'AnsibleTestSecurityGroup']
       KeyName: !Ref 'KeyName'
       ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch,
           !Ref 'InstanceType', Arch]]
@@ -250,17 +274,17 @@ Resources:
                 #sed -i "s?^truecall_rpm:?truecall_rpm: ${TrueCallPackage}?; s?gsrsvcs_rpm:?gsrsvcs_rpm: ${GsrPackage}?g" /opt/ansible/roles/tc_install/vars/main.yml
                 ####### TEST FOR test.ini.j2 JINJA2 TEMPLATE
                 for f in config.ini_vo{,.logic}.j2; do
-                  aws s3 cp s3://ansible-test-kaiyuan/$f /opt/ansible/roles/tc_install/templates
+                  #aws s3 cp s3://ansible-test-kaiyuan/$f /opt/ansible/roles/tc_install/templates
                   chmod 777 /opt/ansible/roles/tc_install/templates/$f
                 done
                 mv /opt/ansible/roles/tc_install/tasks/main.yml /opt/ansible/roles/tc_install/tasks/main_org.yml
                 aws s3 cp s3://ansible-test-kaiyuan/test_main.yml /opt/ansible/roles/tc_install/tasks/main.yml
                 mkdir /opt/ansible/group_vars/all/
-                aws s3 cp s3://ansible-test-kaiyuan/default.yml /opt/ansible/group_vars/all/
+                #aws s3 cp s3://ansible-test-kaiyuan/default.yml /opt/ansible/group_vars/all/
                 #awk 'NR>1{print}' /opt/ansible/default.yml >> /opt/ansible/group_vars/TrueCall.yml
-                for f in {/opt/ansible/roles/tc_install/tasks/main.yml,/opt/ansible/test_default.yml}; do
-                  chmod 777 $f
-                done
+                #for f in {/opt/ansible/roles/tc_install/tasks/main.yml}; do
+                chmod 777 /opt/ansible/roles/tc_install/tasks/main.yml
+                #done
               mode: "000755"
               owner: "root"
               group: "root"
@@ -307,7 +331,7 @@ Resources:
                 echo "alias tcdir='cd /var/lib/truecall/'
                 alias tclog='cd /var/lib/truecall/log/'
                 alias tcconfig='cd /opt/tc3/etc/'
-                alias tcscript='cd /opt/tc3/scripts'" >> .bashrc         
+                alias tcscript='cd /opt/tc3/scripts'" >> ~ec2-user/.bashrc         
 Outputs:
   ControlPublicIp:
     Description: Public IP address of the control server
