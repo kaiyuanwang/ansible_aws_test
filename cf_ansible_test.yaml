@@ -132,6 +132,16 @@ Resources:
           FromPort: '8443'
           ToPort: '8443'
           Description: https
+  AnsibleTestSecurityGroupIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref AnsibleTestSecurityGroup
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+      SourceSecurityGroupId:
+        Ref: AnsibleTestSecurityGroup
+
   SlaveHost1:
     Description: "Ansible Slave host 1"
     Type: AWS::EC2::Instance
