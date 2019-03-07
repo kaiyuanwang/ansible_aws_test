@@ -27,3 +27,31 @@ Build one control server and multiple slave servers in AWS for ansible test.
 		6. Use AWS cfn-init for cloudformation metadata control
 		7. Control server building depends on slave servers. Automatically roll back if control built fails.
 		8. Output server public IPs in cloudformation Output
+
+3. Use boto3 to manage AWS cloudformation stacks.
+	cfn_launch.py
+	
+	Dependencies:
+	
+		pip install requests
+		pip install boto3
+		    IAM -> USERS -> Add user
+		    aws configure -> access key + secret key
+		    C:\Users\kwang1\.aws\credentials
+		        [default]
+		        aws_access_key_id = YOUR_ACCESS_KEY
+		        aws_secret_access_key = YOUR_SECRET_KEY
+		pip install awscli
+		pip install yaml
+		pip install json
+	
+	Functions:
+	
+		1. Create, describe and delete AWS CloudFormation Stackes using boto3.
+		2. Provide local IP address to enable EC2 access to local laptop only. 
+		3. When creating stacks, if not provided, stack name will be appended with current timestamp.
+		4. Describe stack will generate Xshell access config file for stacks in "CREATE_COMPLETE" status.
+		5. Describe stack will show stack information until "DELETE_COMPLETE".
+		6. Delete stack will delete Xshell access config file of the stack.
+		7. Serialize stack info data to cfn-StackInfo.json.
+		8. Serialize stack parameters to cfn-parameters.json with local ip information.

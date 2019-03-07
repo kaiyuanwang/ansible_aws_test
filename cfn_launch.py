@@ -2,7 +2,7 @@
 # -*- coding:utf8 -*-
 
 """
-Name: configure_ansible.py
+Name: cfn_launch.py
 
 Dependencies:
 pip install requests
