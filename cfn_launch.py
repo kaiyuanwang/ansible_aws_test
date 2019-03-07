@@ -9,7 +9,7 @@ pip install requests
 pip install boto3
     IAM -> USERS -> Add user
     aws configure -> access key + secret key
-    C:\Users\kwang1\.aws\credentials
+    C:\\Users\\kwang1\\.aws\\credentials
         [default]
         aws_access_key_id = YOUR_ACCESS_KEY
         aws_secret_access_key = YOUR_SECRET_KEY
@@ -32,7 +32,7 @@ History:
 03/04/2019 Kaiyuan Wang 0.1
     Functions using awscli for stack creation. Stack describe and delete with boto3.
 03/07/2019 Kaiyuan Wang 1
-    Change stack create to boto3. Encapsulation stack management into class CfnClient. Documentation
+    Change stack create to boto3. Encapsulation stack management into class CfnClient. Documentation.
 """
 
 __author__ = "Kaiyuan Wang"
