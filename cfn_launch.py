@@ -60,9 +60,6 @@ from warnings import filterwarnings
 
 """ 
 TODO: currently check on stacks created by this script, add option to check all stacks in region
-TODO: change to functions and classes, and logging
-TODO: load in the existing stack id json, and ask if more than one running. DONE
-TODO: interact: ask which stack to delete, try! DONE
 TODO: retrieve server ip from instance instead of output
 """
 
@@ -265,7 +262,7 @@ class CfnClient(object):
      
 
         if self.stack_info_dict:
-            create_confirm=input("Stacks {0} in system. \nAre you sure you want to create another stack from template: {1}? (y or n)\n".format(list(self.stack_info_dict.keys()),self.cfn_template))
+            create_confirm=input("Stacks {0} in system. \nAre you sure you want to create another stack from template {1} (y or n)?\n".format(list(self.stack_info_dict.keys()),self.cfn_template))
             if create_confirm != "y":
                 sys.exit("Stack creation aborted. Script exit now!")
 
@@ -352,7 +349,7 @@ class CfnClient(object):
             if stack_status.startswith('DELETE'):
                 print('Already initiated DELETE action.')
                 continue
-            delete_confirm=input("Are you sure you want to delete this stack? (y or n)\n") 
+            delete_confirm=input("Are you sure you want to delete this stack (y or n)?\n") 
             if delete_confirm == "y":
                 try:
                     self.cfn_conn.delete_stack(StackName=stack_id)
@@ -377,7 +374,7 @@ class CfnClient(object):
             with open(self.cfn_template, 'r', encoding='utf8') as fh:
                 response = self.cfn_conn.validate_template(TemplateBody=fh.read())
         except Exception as e:
-            sys.exit(': '.join([self.cfn_templatecfn_template,str(e)]))
+            sys.exit(': '.join([self.cfn_template,str(e)]))
         
 
 

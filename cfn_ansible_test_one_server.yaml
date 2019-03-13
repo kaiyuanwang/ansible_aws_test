@@ -192,6 +192,7 @@ Resources:
         "Fn::Base64":
           Fn::Sub: |
             #!/bin/bash -xe
+
             # Get the latest CloudFormation package
             yum update -y aws-cfn-bootstrap
             # Start cfn-init
@@ -398,6 +399,12 @@ Resources:
                   # configure cylinderd server
                   config_file=/opt/tc3/etc/config.ini;for i in `egrep "LSR-server_COMMON_LTE|cylinderd_COMMON_LTE" $config_file| awk -F/ '{print $1}'`; do sed -i "/$i\/args/s/$/|--disk-space-critical-threshold=2/g" $config_file; done
                   rm -f /opt/ansible/roles/tc_install/files/TrueCall-Server-17.3.0.16-0-gaa28f3b-el7-x86_64.rpm
+
+                  ansible-config
+                  ansible-doc
+                  ansible -m yum -s -a "name=ntpd state=installed" -o
+                  ansible all -m user -s/-b -a "name=user2 state=absernt"
+
               mode: "000755"
               owner: "root"
               group: "root"
