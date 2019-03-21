@@ -75,5 +75,5 @@ Fucntions:
 	1. Create AWS cloudformation template using Troposphere
 	2. Use pem file from private s3 bucket for passwordless connections between all servers.
 	3. Support stack types of ansible, serverless, docker, rfb
-	3. Support cloudformation elements of Version, Mapping, Description, 
+	4. Support cloudformation elements of Version, Mapping, Description, 
 	Parameter, SecrurityGroup, Instance, Metadata, Userdata, DependsOn etc.
