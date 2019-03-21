@@ -1,14 +1,14 @@
-# ansible_aws_test
-Build one control server and multiple slave servers in AWS for ansible test.
-
-1. Manually build EC2 control and slave servers with bootstraps and scripts after init:
-	
+# 1. AWS EC2 bootstraps
+Manually build EC2 control and slave servers with bootstraps and scripts after init. Build one control server and multiple slave servers in AWS for ansible test.
 		control_bootstrap.txt
 		slave_bootstrap.txt
 		config_control.sh
 
-2. Use AWS cloudformation to build 1 control and 2 slaves for ansible test. Can extend to more servers.
-	ansible_test_aws.yaml
+# 2. AWS Cloudformations
+Use AWS cloudformation to build 1 control and multiple slaves for ansible test, docker and serverless platforms.
+		cfn_ansible_test.yaml
+		cfn_ansible_test_one_server.yaml
+		cfn_docker_serverless_test.yaml
 	
 	Dependecies:
 		
@@ -28,8 +28,9 @@ Build one control server and multiple slave servers in AWS for ansible test.
 		7. Control server building depends on slave servers. Automatically roll back if control built fails.
 		8. Output server public IPs in cloudformation Output
 
-3. Use boto3 to manage AWS cloudformation stacks.
-	cfn_launch.py
+# 3. Boto3 management for AWS Cloudformation.
+Create, describe and delete AWS CloudFormation Stackes using boto3.
+		cfn_launch.py
 	
 	Dependencies:
 	
@@ -55,3 +56,18 @@ Build one control server and multiple slave servers in AWS for ansible test.
 		6. Delete stack will delete Xshell access config file of the stack.
 		7. Serialize stack info data to cfn-StackInfo.json.
 		8. Serialize stack parameters to cfn-parameters.json with local ip information.
+
+# 4. Troposphere AWS template generator.
+Python script to generate cloudformations templates for ansible, serverless, docker, rfb stack types
+		cfn_generate.py
+		
+	Dependencies:
+	
+		pip install troposphere
+	
+	Fucntions:
+		
+		1. Create AWS cloudformation template using Troposphere
+		2. Use pem file from private s3 bucket for passwordless connections between all servers.
+		3. Support stack types of ansible, serverless, docker, rfb
+		3. Support cloudformation elements of Version, Mapping, Description, Parameter, SecrurityGroup, Instance, Metadata, Userdata, DependsOn etc.

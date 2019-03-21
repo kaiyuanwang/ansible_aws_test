@@ -33,6 +33,9 @@ History:
     Functions using awscli for stack creation. Stack describe and delete with boto3.
 03/07/2019 Kaiyuan Wang 1
     Change stack create to boto3. Encapsulation stack management into class CfnClient. Documentation.
+
+TODO:
+    open interfaces
 """
 
 __author__ = "Kaiyuan Wang"
@@ -55,7 +58,7 @@ try:
     import ConfigParser
 except:
     import configparser as ConfigParser
-from optparse import OptionParser
+from argparse import ArgumentParser
 from warnings import filterwarnings
 
 """ 
@@ -95,12 +98,16 @@ def set_up_logging(log_level):
     """Set up logger."""
     logger = logging.getLogger('ConfigAnsibleLogger')
     logger.setLevel(LOG_LEVELS[log_level])
-    log_file=os.path.join(os.getcwd(), 'cfn_launch.log')
+    log_file=os.path.join(os.getcwd(), 'logs', 'cfn_launch.log')
     formatter = logging.Formatter('[%(asctime)s  %(levelname)s] %(message)s')
     handler = logging.handlers.TimedRotatingFileHandler(log_file, when='D', backupCount=10)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
+
+
+logger = set_up_logging('info')
+
 
 def fetch_local_ip():
     response = requests.get("http://txt.go.sohu.com/ip/soip")
@@ -115,7 +122,7 @@ def fetch_local_ip():
                             "ResolvedValue": "string"
                         }
                     ]
-    with open('cfn-parameters.json', 'w') as fh: 
+    with open(os.path.join(args.cfn_dir,'cfn-parameters.json'), 'w') as fh: 
         json.dump(local_ip_param, fh)
     return local_ip_param
 
@@ -168,10 +175,10 @@ class XshellAccess(object):
 
 
 class CfnClient(object):
-    def __init__(self, region='ap-southeast-2'):
+    def __init__(self, cfn_dir, region='ap-southeast-2', ):
         self.region = region
         self.cfn_conn = boto3.client('cloudformation', region_name=self.region)
-        self.stack_info_json = 'cfn-StackInfo.json'
+        self.stack_info_json = os.path.join(cfn_dir,'cfn-StackInfo.json')
         self.stack_info_dict = {}
         #with open(self.template_yaml) as yh:
         #    self.cfn_template = yaml.load(yh)
@@ -380,49 +387,51 @@ class CfnClient(object):
 
 if __name__ == '__main__':
 
-    parser = OptionParser() 
-    parser.add_option('-t', '--template', dest='cfn_template',          
+    parser = ArgumentParser(description="Launch, describe and delete cloudformation stacks") 
+    parser.add_argument('-t', '--template', dest='cfn_template',          
         help='Cloudformation template. Default: cfn_ansible_test_one_server.yaml. 3 server template: cfn_ansible_test.yaml',
         default='cfn_ansible_test_one_server.yaml', action='store')
-    parser.add_option('-n', '--stack-name', dest='stack_name',          
+    parser.add_argument('-d', '--dir', dest='cfn_dir',          
+        help='Cloudformation dir. Default: cfn_template. ',
+        default='cfn_template', action='store')
+    parser.add_argument('-n', '--stack-name', dest='stack_name',          
         help='Cloudformation stack name', action='store')
-    parser.add_option('-i', '--stack-id', dest='stack_id',          
+    parser.add_argument('-i', '--stack-id', dest='stack_id',          
         help='Cloudformation stack id. Used by stack-describe, stack-delete', 
         default='', action='store')
-    parser.add_option('-p', '--parameter-file', dest='parameter_file',          
+    parser.add_argument('-p', '--parameter-file', dest='parameter_file',          
         help='Cloudformation parameter file. default: cfn-parameter.json',
         default='cfn-parameter.json', action='store')
-    parser.add_option('-r', '--region', dest='region',          
+    parser.add_argument('-r', '--region', dest='region',          
         help='Cloudformation parameter file. default: ap-southeast-2',
         default="ap-southeast-2", action='store')
-    parser.add_option('-m', '--mode', dest='mode',          
+    parser.add_argument('-m', '--mode', dest='mode',          
         help='Cloudformation management mode. Available options: stack-create, stack-delete, stack-describe.',
         default="describe", action='store')
-    parser.add_option('-l', '--log-level', dest='log_level',          
+    parser.add_argument('-l', '--log-level', dest='log_level',          
         help='Availalbe log_level: debug, info, warning, error, critical.',
         default="info", action='store')
-    (options, largs) = parser.parse_args() 
+    args = parser.parse_args()  
 
-    logger = set_up_logging('info')
-    logger.info("""script start. \n{0}""".format(options))
+    logger.info("""script start. \n{0}""".format(args))
 
 
     # CREATE CfnClient INSTANCE
-    cfn_client = CfnClient()
+    cfn_client = CfnClient(args.cfn_dir)
 
     # CREATE STACK
-    if options.mode == "create":
-        if options.stack_name:
-            stack_name = options.stack_name
+    if args.mode == "create":
+        if args.stack_name:
+            stack_name = args.stack_name
         else:
-            stack_name = '-'.join(re.findall("([0-9a-zA-Z]+)",options.cfn_template)[:-1]+[datetime.datetime.now().strftime("%Y%m%d%H%M%S")])
-        cfn_client.build_cfn(options.cfn_template, stack_name)
+            stack_name = '-'.join(re.findall("([0-9a-zA-Z]+)",args.cfn_template)[:-1]+[datetime.datetime.now().strftime("%Y%m%d%H%M%S")])
+        cfn_client.build_cfn(os.path.join(args.cfn_dir,args.cfn_template), stack_name)
 
-    elif options.mode == "describe":
-        cfn_client.describe_cfn(options.stack_id)
+    elif args.mode == "describe":
+        cfn_client.describe_cfn(args.stack_id)
 
-    elif options.mode == "delete":
-        cfn_client.delete_cfn(options.stack_id)
+    elif args.mode == "delete":
+        cfn_client.delete_cfn(args.stack_id)
 
     else:
         sys.exit("Not a valid mode option!")
