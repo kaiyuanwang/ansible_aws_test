@@ -7,7 +7,6 @@ import io
 from log_cfg import logger
 import re
 
-#s3 = boto3.client('s3',aws_access_key_id='AKIAIFIFTEDH367NAK3Q',aws_secret_access_key='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')
 s3 = boto3.client('s3')
 
 def requestUploadURL(event, context):
