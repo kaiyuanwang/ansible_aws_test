@@ -23,7 +23,8 @@ Functions:
 	
 	1. build 1 control server and 2 slave servers with all application dependency packages 
 	2. On control, install ansible, git, copy applicaiton packages from private s3 bucket
-	3. Use pem file from private s3 bucket for passwordless connections between all servers. change to rsa pair for enhanced security later.
+	3. Use pem file from private s3 bucket for passwordless connections between all servers. 
+	change to rsa pair for enhanced security later.
 	4. Update contorl /etc/hosts with slave IPs
 	5. Need to update security group to allow laptop ip access
 	6. Use AWS cfn-init for cloudformation metadata control
@@ -74,4 +75,5 @@ Fucntions:
 	1. Create AWS cloudformation template using Troposphere
 	2. Use pem file from private s3 bucket for passwordless connections between all servers.
 	3. Support stack types of ansible, serverless, docker, rfb
-	3. Support cloudformation elements of Version, Mapping, Description, Parameter, SecrurityGroup, Instance, Metadata, Userdata, DependsOn etc.
+	4. Support cloudformation elements of Version, Mapping, Description, 
+	Parameter, SecrurityGroup, Instance, Metadata, Userdata, DependsOn etc.
