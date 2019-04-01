@@ -1,0 +1,101 @@
+# npm install --save serverless-finch
+# serverless-website2-kaiyuan: s3 bucket for static webserver. deletes upon sls client remove. automatically empty
+# serverless-website1-kaiyuan: s3 bucket for data processing, deletes upon sls remove. needs empty first
+# launch procedures:
+#       1. update lambda python script with static website url
+#              'Access-Control-Allow-Origin': 'http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com' 
+#       2. launch lambda by "sls deploy", and get lambda url
+#       3. update client/dist/index with lambda url
+#               apiBaseURL = "https://0gqit0d8k5.execute-api.ap-southeast-2.amazonaws.com/dev"
+#       4. launch static webserver by "sls client deploy"
+#
+# issue: connect from jupyter notebook works. from lambda not working, s3 signature or acl issue
+# check s3 acl and permissions
+
+service: config-ansible-website
+plugins:
+  - serverless-finch
+  - serverless-python-requirements
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  client:
+    bucketName: serverless-website2-kaiyuan
+    distributionFolder: client/dist
+
+provider:
+  name: aws
+  runtime: python3.7
+  profile: lambda
+  region: ap-southeast-2
+  timeout: 60
+  iamRoleStatements:
+   - Effect: "Allow"
+     Action:
+       - "s3:*"
+     Resource: "*"
+
+functions:
+  requestUploadURL:
+    handler: handler.requestUploadURL
+    events:
+      - http:
+          path: requestUploadURL
+          method: post
+          cors: true
+
+  configAnsible:
+    handler: handler.s3_ansible_config_generator
+    events:
+      - s3:
+          bucket: config
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .xlsx
+      - s3:
+          bucket: config
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .xls
+
+resources:
+  Resources:
+    S3BucketConfig:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: serverless-website1-kaiyuan
+        AccessControl: PublicRead
+        CorsConfiguration:
+          CorsRules:
+          - AllowedMethods:
+            - GET
+            - PUT
+            - POST
+            - HEAD
+            - DELETE
+            AllowedOrigins:
+            - "*"
+            AllowedHeaders:
+            - "*"
+    S3BucketConfigPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: S3BucketConfig
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "s3:*"
+              Resource: "arn:aws:s3:::serverless-website1-kaiyuan/*"
+    ConfigAnsibleLambdaPermissionConfigS3:
+      Type: "AWS::Lambda::Permission"
+      Properties:
+        FunctionName:
+          "Fn::GetAtt":
+            - ConfigAnsibleLambdaFunction
+            - Arn
+        Principal: "s3.amazonaws.com"
+        Action: "lambda:InvokeFunction"
+        SourceAccount:
+          Ref: AWS::AccountId
+        SourceArn: "arn:aws:s3:::serverless-website1-kaiyuan"
