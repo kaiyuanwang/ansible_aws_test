@@ -224,8 +224,6 @@ Resources:
             for rfb_pkg in Netscout-FlowBroker-V7.17.3.0.3-0_rhel7.x86_64.rpm Netscout-FlowBroker-V7.17.4.0.3-1_cos731611el7.x86_64.rpm{,.md5} {xhhny82708_config.zip,JKT-RFB-01_config.tgz,boost_rpms.tgz} RFB_NE_TABLE_RRC_20181207.csv; do
               aws s3 cp s3://ansible-test-kaiyuan/$rfb_pkg /opt
             done
-            #rpm -qa | grep boost | tr -s '\n' ' '| xargs rpm -e
-            tar xvf /opt/boost_rpms.tgz && yum -y localinstall boost*.rpm && rm -rf boost*.rpm
 
 
             # All done so signal success
@@ -264,7 +262,7 @@ Resources:
                   [main]
                   stack=${AWS::StackId}
                   region=${AWS::Region}
-              mode: "000400"
+              mode: "000755"
               owner: "root"
               group: "root"
             "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
@@ -274,7 +272,7 @@ Resources:
                   triggers=post.update
                   path=Resources.ControlHost.Metadata.AWS::CloudFormation::Init
                   action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ControlHost --region ${AWS::Region}
-              mode: "000400"
+              mode: "000755"
               owner: "root"
               group: "root"
             "/etc/hosts":
@@ -604,6 +602,8 @@ Resources:
                 Fn::Sub: |
                   #!/bin/bash
 
+                  #rpm -qa | grep boost | tr -s '\n' ' '| xargs rpm -e
+                  tar xvf /opt/boost_rpms.tgz && yum -y localinstall boost*.rpm && rm -rf boost*.rpm
                   # Install RFB dependencies
                   #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                   #yum install -y armadillo arpack atlas blas dbus git gzip libcap-ng libunwind lzma mcelog mlpack net-snmp-libs perl sshpass tbb zlib hdf5 lapack libgfortran libgnome-keyring libicu libquadmath

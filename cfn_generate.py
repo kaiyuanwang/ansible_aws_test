@@ -18,6 +18,7 @@ History:
 # TODO: 
     1. encapsulate data 
     2. open interfaces
+    3. change to rsa pair for enhanced security.
 
 """
 
@@ -54,6 +55,7 @@ from troposphere.ec2 import SecurityGroup
 from troposphere.ec2 import Instance, NetworkInterfaceProperty, PrivateIpAddressSpecification
 from troposphere.policies import CreationPolicy, ResourceSignal
 
+from cfn_launch import CfnClient
 
 
 LOG_LEVELS = { 'debug':logging.DEBUG,
@@ -265,7 +267,13 @@ META_CONFIG = {
     "buckets": ["lambda-code-kaiyuan", "ansible-test-kaiyuan"],
     "creation_policy": CreationPolicy(ResourceSignal=ResourceSignal(Timeout='PT15M')),
     "sources": {
-        "serverless": {'root': '/'.join([ "https://lambda-code-kaiyuan.s3.amazonaws.com", "python-s3-thumbnail.zip" ])},
+        "serverless": {k:'/'.join(["https://lambda-code-kaiyuan.s3.amazonaws.com",v]) for k,v in 
+            {
+            '/root/python-config-ansible-s3': "python-config-ansible-s3.zip",
+            '/root/serverless-website': 'serverless-website.zip',
+            '/root/config-ansible-website': 'config-ansible-website.zip'
+            '/root/scripts': 'sls_scripts.tar.gz'
+            }.items()},
         "ansible": {k:'/'.join(["https://ansible-test-kaiyuan.s3.amazonaws.com",v]) for k,v in 
             {
             "/opt":  DEFAULT_CONFIG["AnsibleParameter"]["AnsiblePackage"]["Default"], 
@@ -294,9 +302,12 @@ META_CONFIG = {
     },
     "userdata": {
         "pre_config": """#!/bin/bash -xe
-        # pre_config, put at first line, it will break the userdata
+        # pre_config, putting at start of file will break the userdata
 yum update -y
-yum install git python-pip tree -y
+yum install git python-pip tree dos2unix python3 -y
+pip install boto3 pyyaml numpy pandas xlrd requests xlsxwriter
+pip3 install boto3 pyyaml numpy pandas xlrd requests xlsxwriter
+
 """,
         "cfn_init": """
 # cfn_init
@@ -318,8 +329,8 @@ nvm install node
 nvm use node
 node -e "console.log('Running Node.js ' + process.version)"
 npm install -g serverless
-aws s3 cp s3://ansible-test-kaiyuan/lambda_credentials.csv .
-awk -F'\t' 'NR>1{printf "serverless config credentials --provider aws --key "$2" --secret "$3" --profile "$1}' lambda_credentials.csv
+aws s3 cp s3://ansible-test-kaiyuan/lambda_credentials.csv .; dos2unix lambda_credentials.csv
+`awk -F'\t' 'NR>1{printf "serverless config credentials --provider aws --key "$2" --secret "$3" --profile "$1}' lambda_credentials.csv`
 """,
         "docker": """
 # docker
@@ -339,7 +350,6 @@ git clone https://github.com/BretFisher/udemy-docker-mastery.git /root/udemy-doc
         "ansible": """
 # ansible
 amazon-linux-extras install ansible2 -y
-pip install numpy pandas xlrd xlsxwriter
 cd /opt/ansible
 git init
 
@@ -602,6 +612,7 @@ yum update -y aws-cfn-bootstrap
         print(self.template.to_yaml())
         with open(os.path.join(cfn_dir,self.template_name), 'w') as f:
             f.write(self.template.to_yaml())
+        print("Successfully generated template: {0}, under dir: {1}.\nTo be launched by:\npython cfn_launch.py -m create -t {0}".format(self.template_name, cfn_dir))
 
 @log()
 def gen_meta_config(cfn_usage):
@@ -668,11 +679,10 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(description="Generate cloudformation template")
     parser.add_argument('-c', '--count', dest='server_count',          
-        help='Number of servers. 1 control and additional slave servers.',
-        default='2', action='store')
+        help='Number of servers. 1 control and additional slave servers. Default: 1',
+        default='1', action='store')
     parser.add_argument('-t', '--template-name', dest='template_name',          
-        help='Name of template to generate.',
-        default='TestTest.yaml', action='store')
+        help='Name of template to generate. Default: cfn_usage.yaml', action='store')
     parser.add_argument('--cfn-dir', dest='cfn_dir',          
         help='Cloudformation dir. Default: cfn_template.',
         default='cfn_template', action='store')
@@ -680,7 +690,7 @@ if __name__ == '__main__':
         help='Cloudformation dir. Default: cfn_config. ',
         default='cfn_config', action='store')
     parser.add_argument('-u', '--usage', dest='cfn_usage', type=str, nargs='+',
-        help='Cloudformation usage. Options: ansible (truecall), serverless, docker, rfb',
+        help='Cloudformation usage. Options: ansible (truecall), serverless, docker, rfb. Default: ansible',
         default=['ansible'])
 
 
@@ -689,8 +699,12 @@ if __name__ == '__main__':
 
     logger.info("""script start. \n{0}""".format(args))    
 
-    
-    server_name_pre = "".join(map(lambda x: x.capitalize(), re.split(r'_|\.',args.template_name)[:-1]))
+    if args.template_name:
+        server_name_pre = "".join(map(lambda x: x.capitalize(), re.split(r'_|\.',args.template_name)[:-1]))
+        template_name = args.template_name
+    else:
+        server_name_pre = "".join(map(lambda x: x.capitalize(), args.cfn_usage))
+        template_name = "cfn_"+"_".join(args.cfn_usage)+'.yaml'
 
 
     meta_config = gen_meta_config(args.cfn_usage)
@@ -699,7 +713,7 @@ if __name__ == '__main__':
 
 
 
-    cfn_generator = CfnGenerator(args.template_name, args.config_dir, args.cfn_usage, args.server_count)
+    cfn_generator = CfnGenerator(template_name, args.config_dir, args.cfn_usage, args.server_count)
     cfn_generator.add_resource("SecurityGroup", "TestSecurityGroup")
     cfn_generator.add_resource("SecurityGroupIngress", "TestSecurityGroupIngress")
 
@@ -709,3 +723,9 @@ if __name__ == '__main__':
 
     cfn_generator.add_output()
     cfn_generator.gen_cfn_template(args.cfn_dir)
+
+
+    # launch cfn template
+    stack_name = '-'.join(re.findall("([0-9a-zA-Z]+)",template_name)[:-1]+[datetime.datetime.now().strftime("%Y%m%d%H%M%S")])
+    cfn_client = CfnClient(args.cfn_dir)
+    cfn_client.build_cfn(os.path.join(args.cfn_dir,template_name), stack_name)

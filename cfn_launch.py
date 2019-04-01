@@ -14,8 +14,7 @@ pip install boto3
         aws_access_key_id = YOUR_ACCESS_KEY
         aws_secret_access_key = YOUR_SECRET_KEY
 pip install awscli
-pip install yaml
-pip install json
+pip install PyYAML
 
 Functions:
 1. Create, describe and delete AWS CloudFormation Stackes using boto3.
@@ -122,7 +121,7 @@ def fetch_local_ip():
                             "ResolvedValue": "string"
                         }
                     ]
-    with open(os.path.join(args.cfn_dir,'cfn-parameters.json'), 'w') as fh: 
+    with open(os.path.join('cfn_template','cfn-parameters.json'), 'w') as fh: 
         json.dump(local_ip_param, fh)
     return local_ip_param
 
@@ -227,7 +226,10 @@ class CfnClient(object):
                 #print("ControlPublicIp: "+stack_output['ControlPublicIp'])
                 
                 if not stack_status.startswith("DELETE"):
-                    XshellAccess.create(stack_name, stack_output['ControlPublicIp'])
+                    try:
+                        XshellAccess.create(stack_name, stack_output['ControlPublicIp'])
+                    except:
+                        pass
                 stack_info.update({"stack_output":stack_output})
             
             stack_dict_tmp.update({stack_id:stack_info})
@@ -278,7 +280,9 @@ class CfnClient(object):
                 stack_id = self.cfn_conn.create_stack(
                     StackName=self.stack_name,
                     TemplateBody=fh.read(),
-                    Parameters=self.cfn_parameters
+                    Parameters=self.cfn_parameters,
+                    # when creating IAM
+                    Capabilities=['CAPABILITY_IAM']
                     )['StackId']
         except  Exception as e:
             logger.error("{0} loading error. {1}".format(self.cfn_template, e))
@@ -389,8 +393,8 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(description="Launch, describe and delete cloudformation stacks") 
     parser.add_argument('-t', '--template', dest='cfn_template',          
-        help='Cloudformation template. Default: cfn_ansible_test_one_server.yaml. 3 server template: cfn_ansible_test.yaml',
-        default='cfn_ansible_test_one_server.yaml', action='store')
+        help='Cloudformation template. Default: cfn_test.yaml. 3 server template: cfn_ansible_test.yaml',
+        default='cfn_test.yaml', action='store')
     parser.add_argument('-d', '--dir', dest='cfn_dir',          
         help='Cloudformation dir. Default: cfn_template. ',
         default='cfn_template', action='store')
@@ -406,7 +410,7 @@ if __name__ == '__main__':
         help='Cloudformation parameter file. default: ap-southeast-2',
         default="ap-southeast-2", action='store')
     parser.add_argument('-m', '--mode', dest='mode',          
-        help='Cloudformation management mode. Available options: stack-create, stack-delete, stack-describe.',
+        help='Cloudformation management mode. Available options: create, delete, describe.',
         default="describe", action='store')
     parser.add_argument('-l', '--log-level', dest='log_level',          
         help='Availalbe log_level: debug, info, warning, error, critical.',
