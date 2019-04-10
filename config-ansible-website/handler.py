@@ -22,7 +22,11 @@ def requestUploadURL(event, context):
         'ACL': 'public-read'
     }
     logger.info(s3_params)
-    uploadURL = s3.generate_presigned_url('put_object', ExpiresIn=60, Params=s3_params)
+    """
+    getting 307 Temporary Redirect when accessing serverless-website1-kaiyuan.s3.amazonaws.com. force to use s3-ap-southeast-2.amazonaws.com
+    After you create an Amazon S3 bucket, it can take up to 24 hours for the bucket name to propagate across all AWS Regions. During this time, you might receive the "307 Temporary Redirect" response for requests to regional endpoints that aren't in the same Region as the S3 bucket.
+    """
+    uploadURL = re.sub('serverless-website1-kaiyuan.s3.amazonaws.com','s3-ap-southeast-2.amazonaws.com/serverless-website1-kaiyuan',s3.generate_presigned_url('put_object', ExpiresIn=300, Params=s3_params))
     logger.info(uploadURL)
     #files = StringIO("asdfsdfsdf")
     #s3_response = s3.put_object(*s3_params, Body=data)
@@ -34,6 +38,7 @@ def requestUploadURL(event, context):
         "ansibleConfigFile": re.sub('.xls[x]?$', '.zip', s3_params["Key"])
     }
     headers = {
+        #'Access-Control-Allow-Origin': 'http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com'
         'Access-Control-Allow-Origin': '*'
     }
 

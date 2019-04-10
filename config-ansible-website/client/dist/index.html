@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>A File Upload Demo</title>
+  <title>TrueCall Config Ansible</title>
   <style>
     html, body {
       height: 100%;
@@ -13,8 +13,7 @@
     .aligner {
       height: 100%;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: left;
       flex-direction: column;
     }
     #drop {
@@ -30,6 +29,8 @@
   </style>
 </head>
 <body>
+  <br />
+  <br />
   <div class="aligner">
     <div id="drop">Drop server information file here.</div>
     <div id="list">
@@ -44,7 +45,7 @@
     var drop = document.getElementById('drop');
     var list = document.getElementById('list');
     var configList = document.getElementById('configList');
-    var apiBaseURL = "https://bg5un7gn73.execute-api.ap-southeast-2.amazonaws.com/dev";
+    var apiBaseURL = "https://3g9wf5ul67.execute-api.ap-southeast-2.amazonaws.com/dev";
 
     function cancel(e) {
       e.preventDefault();
@@ -76,7 +77,8 @@
             fetch(json.uploadURL, {
               method: "PUT",
               headers: {
-                'x-amz-acl': 'public-read'
+                'x-amz-acl': 'public-read',
+                'Content-Type': file.type
               },
               body: new Blob([reader.result], {type: file.type})
             }) 

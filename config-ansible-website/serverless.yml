@@ -63,7 +63,13 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: serverless-website1-kaiyuan
-        AccessControl: PublicRead
+        AccessControl: PublicReadWrite
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteEverythingInThreeMonths
+              Prefix: ''
+              Status: Enabled
+              ExpirationInDays: '90'
         CorsConfiguration:
           CorsRules:
           - AllowedMethods:
@@ -73,6 +79,7 @@ resources:
             - HEAD
             - DELETE
             AllowedOrigins:
+            #- "http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com"
             - "*"
             AllowedHeaders:
             - "*"
@@ -83,6 +90,12 @@ resources:
           Ref: S3BucketConfig
         PolicyDocument:
           Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+              Resource: "arn:aws:s3:::serverless-website1-kaiyuan"
             - Effect: Allow
               Principal: "*"
               Action: "s3:*"

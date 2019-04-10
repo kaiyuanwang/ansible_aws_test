@@ -271,7 +271,7 @@ META_CONFIG = {
             {
             '/root/python-config-ansible-s3': "python-config-ansible-s3.zip",
             '/root/serverless-website': 'serverless-website.zip',
-            '/root/config-ansible-website': 'config-ansible-website.zip'
+            '/root/config-ansible-website': 'config-ansible-website.zip',
             '/root/scripts': 'sls_scripts.tar.gz'
             }.items()},
         "ansible": {k:'/'.join(["https://ansible-test-kaiyuan.s3.amazonaws.com",v]) for k,v in 
@@ -329,8 +329,8 @@ nvm install node
 nvm use node
 node -e "console.log('Running Node.js ' + process.version)"
 npm install -g serverless
-aws s3 cp s3://ansible-test-kaiyuan/lambda_credentials.csv .; dos2unix lambda_credentials.csv
-`awk -F'\t' 'NR>1{printf "serverless config credentials --provider aws --key "$2" --secret "$3" --profile "$1}' lambda_credentials.csv`
+aws s3 cp s3://lambda-code-kaiyuan/lambda_credentials.csv .; dos2unix lambda_credentials.csv
+`awk -F, 'NR>1{printf "serverless config credentials --provider aws --key "$3" --secret "$4" --profile "$1}' lambda_credentials.csv`
 """,
         "docker": """
 # docker
@@ -346,6 +346,7 @@ sudo install /tmp/docker-machine /usr/local/bin/docker-machine
 #curl -sLf https://spacevim.org/install.sh | bash
 aws s3 cp s3://lambda-code-kaiyuan/aws-lambda-20190103.zip /root/
 git clone https://github.com/BretFisher/udemy-docker-mastery.git /root/udemy-docker-mastery
+curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
 """,
         "ansible": """
 # ansible
@@ -691,7 +692,7 @@ if __name__ == '__main__':
         default='cfn_config', action='store')
     parser.add_argument('-u', '--usage', dest='cfn_usage', type=str, nargs='+',
         help='Cloudformation usage. Options: ansible (truecall), serverless, docker, rfb. Default: ansible',
-        default=['ansible'])
+        default=['serverless','docker'])
 
 
 

@@ -53,6 +53,7 @@ import logging.handlers
 import datetime
 import subprocess
 import shutil
+import platform, getpass
 try:
     import ConfigParser
 except:
@@ -97,15 +98,18 @@ def set_up_logging(log_level):
     """Set up logger."""
     logger = logging.getLogger('ConfigAnsibleLogger')
     logger.setLevel(LOG_LEVELS[log_level])
-    log_file=os.path.join(os.getcwd(), 'logs', 'cfn_launch.log')
+    if os.path.exists(os.path.join(os.getcwd(), 'logs')):
+        log_file=os.path.join(os.getcwd(), 'logs', 'cfn_launch.log')
+    else:
+        log_file=os.path.join(os.getcwd(), 'cfn_launch.log')
     formatter = logging.Formatter('[%(asctime)s  %(levelname)s] %(message)s')
     handler = logging.handlers.TimedRotatingFileHandler(log_file, when='D', backupCount=10)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
 
-
 logger = set_up_logging('info')
+
 
 
 def fetch_local_ip():
@@ -166,10 +170,13 @@ class XshellAccess(object):
         cf = MyConfigParser(allow_no_value=True)
         cf.read(aws_config_template)
         cf['CONNECTION']['Host'] = control_ip
+
+        config_basename = os.path.join('C:\\Users', getpass.getuser(), 'Desktop', config_basename)
         with open(config_basename, 'w') as fh:
             cf.write(fh)
     @staticmethod
     def delete(stack_name):
+        stack_name = os.path.join('C:\\Users', getpass.getuser(), 'Desktop', stack_name)
         os.remove(stack_name+'.xsh')
 
 
@@ -225,7 +232,7 @@ class CfnClient(object):
                 logger.info("stack_details['Outputs']:\n{0}".format(stack_details['Outputs']))
                 #print("ControlPublicIp: "+stack_output['ControlPublicIp'])
                 
-                if not stack_status.startswith("DELETE"):
+                if not stack_status.startswith("DELETE") and platform.system() == 'Windows':
                     try:
                         XshellAccess.create(stack_name, stack_output['ControlPublicIp'])
                     except:
@@ -365,7 +372,8 @@ class CfnClient(object):
                 try:
                     self.cfn_conn.delete_stack(StackName=stack_id)
                     logger.info(stack_info_dict)
-                    XshellAccess.delete(stack_info_dict[stack_id].get('stack_name'))
+                    if platform.system() == 'Windows':
+                        XshellAccess.delete(stack_info_dict[stack_id].get('stack_name'))
                 except:
                     pass
                 finally:
@@ -390,6 +398,7 @@ class CfnClient(object):
 
 
 if __name__ == '__main__':
+
 
     parser = ArgumentParser(description="Launch, describe and delete cloudformation stacks") 
     parser.add_argument('-t', '--template', dest='cfn_template',          
