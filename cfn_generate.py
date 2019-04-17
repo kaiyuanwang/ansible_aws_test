@@ -214,7 +214,7 @@ Dependecies:
       }
     },
 
-    # parameters t be provisioned 
+    # parameters to be provisioned 
     "SecurityGroup":  {
         "resource_name": '',
         "VpcId": "__".join(["ref_Parameter","VpcId"]),
@@ -231,9 +231,15 @@ Dependecies:
         {
           "IpProtocol": "tcp",
           "CidrIp": "0.0.0.0/0",
-          "FromPort": "8443",
-          "ToPort": "8443",
+          "FromPort": "8000",
+          "ToPort": "8888",
           "Description": "https"
+        },
+        {
+          "IpProtocol": "tcp",
+          "CidrIp": "0.0.0.0/0",
+          "FromPort": "5000",
+          "ToPort": "5000"
         }
         ]
 
@@ -269,9 +275,19 @@ META_CONFIG = {
     "sources": {
         "serverless": {k:'/'.join(["https://lambda-code-kaiyuan.s3.amazonaws.com",v]) for k,v in 
             {
-            '/root/python-config-ansible-s3': "python-config-ansible-s3.zip",
-            '/root/serverless-website': 'serverless-website.zip',
+            #'/root/python-config-ansible-s3': "python-config-ansible-s3.zip",
+            #'/root/serverless-website': 'serverless-website.zip',
             '/root/config-ansible-website': 'config-ansible-website.zip',
+            '/root/scripts': 'sls_scripts.tar.gz',
+            '/root/aws_certified_developer': 'aws_certified_developer.zip'
+            }.items()},
+        "docker": {k:'/'.join(["https://lambda-code-kaiyuan.s3.amazonaws.com",v]) for k,v in 
+            {
+            '/root/udemy-docker-mastery': 'udemy-docker-mastery.zip',
+            '/root/scripts': 'sls_scripts.tar.gz'
+            }.items()},
+        "awstest": {k:'/'.join(["https://lambda-code-kaiyuan.s3.amazonaws.com",v]) for k,v in 
+            {
             '/root/scripts': 'sls_scripts.tar.gz'
             }.items()},
         "ansible": {k:'/'.join(["https://ansible-test-kaiyuan.s3.amazonaws.com",v]) for k,v in 
@@ -302,12 +318,13 @@ META_CONFIG = {
     },
     "userdata": {
         "pre_config": """#!/bin/bash -xe
-        # pre_config, putting at start of file will break the userdata
+# pre_config, putting at start of file will break the userdata
 yum update -y
 yum install git python-pip tree dos2unix python3 -y
 pip install boto3 pyyaml numpy pandas xlrd requests xlsxwriter
 pip3 install boto3 pyyaml numpy pandas xlrd requests xlsxwriter
-
+aws s3 cp s3://ansible-test-kaiyuan/ /tmp --recursive --exclude "*" --include "config_root_ssh*" && chmod 777 /tmp/*.sh
+complete -C '/usr/bin/aws_completer' aws
 """,
         "cfn_init": """
 # cfn_init
@@ -317,7 +334,6 @@ aws s3 cp s3://ansible-test-kaiyuan/MyEC2KeyPair.pem /home/ec2-user/.ssh/
 /opt/aws/bin/cfn-init -s ${AWS::StackId} -r server_name --region ${AWS::Region} || error_exit 'Failed to run cfn-init'
 # Start up the cfn-hup daemon to listen for changes to the EC2 instance metadata
 /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup'
-
 """,
         "serverless": """
 # serverless
@@ -329,8 +345,10 @@ nvm install node
 nvm use node
 node -e "console.log('Running Node.js ' + process.version)"
 npm install -g serverless
+# not secure here
 aws s3 cp s3://lambda-code-kaiyuan/lambda_credentials.csv .; dos2unix lambda_credentials.csv
 `awk -F, 'NR>1{printf "serverless config credentials --provider aws --key "$3" --secret "$4" --profile "$1}' lambda_credentials.csv`
+aws s3 cp s3://lambda-code-kaiyuan/aws-lambda-20190103.zip /root/
 """,
         "docker": """
 # docker
@@ -344,8 +362,8 @@ base=https://github.com/docker/machine/releases/download/v0.16.0 &&
 curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/tmp/docker-machine &&
 sudo install /tmp/docker-machine /usr/local/bin/docker-machine
 #curl -sLf https://spacevim.org/install.sh | bash
-aws s3 cp s3://lambda-code-kaiyuan/aws-lambda-20190103.zip /root/
-git clone https://github.com/BretFisher/udemy-docker-mastery.git /root/udemy-docker-mastery
+
+#git clone https://github.com/BretFisher/udemy-docker-mastery.git /root/udemy-docker-mastery
 curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
 """,
         "ansible": """
@@ -374,6 +392,8 @@ tar xvf /opt/boost_rpms.tgz && yum -y localinstall boost*.rpm && rm -rf boost*.r
 # cfn_signal
 chmod 400 /home/ec2-user/.ssh/*
 chown ec2-user:ec2-user /home/ec2-user/.ssh/*
+bash /tmp/config_root_ssh_control.sh
+
 # All done so signal success
 /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource server_name --region ${AWS::Region}
 """
@@ -495,12 +515,24 @@ yum update -y aws-cfn-bootstrap
                       "ToPort": "22",
                       "Description": "ssh"
                 })
+
             elif resource_type == "SecurityGroupIngress":
                 content["GroupId"] = Ref(self.input_config["SecurityGroup"]["resource_name"])
                 content["SourceSecurityGroupId"] = Ref(self.input_config["SecurityGroup"]["resource_name"])
+                
+                content1 = {k:v for k,v in content.items()}
+                content1.update({"IpProtocol": "udp"})
+                logger.info(content1)
+                self.template_config[resource_type][resource_name+'Udp'] = eval(resource_type).from_dict(resource_name+'Udp',content1)
+                self.template.add_resource(self.template_config[resource_type][resource_name+'Udp'])
+                
             self.template_config[resource_type][resource_name] = eval(resource_type).from_dict(resource_name,content)
             self.template.add_resource(self.template_config[resource_type][resource_name])
             self.input_config[resource_type]["resource_name"] = resource_name
+
+
+
+
 
         elif resource_type == 'Instance':
             content["InstanceType"] = Ref(self.template_config['Parameter']['InstanceType'])
@@ -623,12 +655,13 @@ def gen_meta_config(cfn_usage):
     meta_config["sources"] = {}
     meta_config["commands"] = META_CONFIG["commands"]["control"]
     control_userdata = ""
-    meta_config["slave_userdata"] = META_CONFIG["userdata"]["pre_config"]
+    #meta_config["slave_userdata"] = META_CONFIG["userdata"]["pre_config"]
+    meta_config["slave_userdata"] = '\n'.join([META_CONFIG["userdata"].get(x, '') for x in ['pre_config'] + [y for y in cfn_usage if y != 'ansible']]) 
     for usage in cfn_usage:
-        control_userdata +=  META_CONFIG["userdata"].get(usage)
+        control_userdata +=  META_CONFIG["userdata"].get(usage, '')
         for init_item in ["sources", "commands"]:
             try:
-                meta_config[init_item].update(META_CONFIG[init_item].get(usage))
+                meta_config[init_item].update(META_CONFIG[init_item].get(usage,''))
             except TypeError as e:
                 logger.info("No {0} for {1}".format(init_item, usage))
     default_control_userdata = [META_CONFIG["userdata"][x] for x in ["pre_config", "cfn_init", "cfn_signal"]]
@@ -664,7 +697,7 @@ def gen_server_info(count, dir, **meta_config):
 ::1         localhost6 localhost6.localdomain6\n""")
         for key in server_info.keys():
             if re.search("[Cc]ontrol", key):
-                fh.write("{0}\n".format(key))
+                fh.write("{0}\n".format('control'))
             else:
                 fh.write("${{{0}.PrivateIp}} {1}\n".format(key, "slave"+re.findall('\d+',key)[-1]))
     with open(os.path.join(dir,"ssh_config.txt"),'w') as fh:
@@ -691,8 +724,11 @@ if __name__ == '__main__':
         help='Cloudformation dir. Default: cfn_config. ',
         default='cfn_config', action='store')
     parser.add_argument('-u', '--usage', dest='cfn_usage', type=str, nargs='+',
-        help='Cloudformation usage. Options: ansible (truecall), serverless, docker, rfb. Default: ansible',
-        default=['serverless','docker'])
+        help='Cloudformation usage. Options: awstest, ansible (truecall), serverless, docker, rfb. Default: awstest',
+        default=['awstest'])
+    parser.add_argument('-l', '--launch', dest='cfn_launch', 
+        help='Cloudformation launch. Default: True. No launch: False',
+        default=True, action='store')
 
 
 
@@ -705,12 +741,12 @@ if __name__ == '__main__':
         template_name = args.template_name
     else:
         server_name_pre = "".join(map(lambda x: x.capitalize(), args.cfn_usage))
-        template_name = "cfn_"+"_".join(args.cfn_usage)+'.yaml'
+        template_name = "cfn_"+"_".join(args.cfn_usage)+'_'+args.server_count+'.yaml'
 
 
     meta_config = gen_meta_config(args.cfn_usage)
     server_info = gen_server_info(args.server_count, args.config_dir, **meta_config)
-    logger.info(server_info)
+    #logger.info(server_info)
 
 
 
@@ -725,8 +761,8 @@ if __name__ == '__main__':
     cfn_generator.add_output()
     cfn_generator.gen_cfn_template(args.cfn_dir)
 
-
-    # launch cfn template
-    stack_name = '-'.join(re.findall("([0-9a-zA-Z]+)",template_name)[:-1]+[datetime.datetime.now().strftime("%Y%m%d%H%M%S")])
-    cfn_client = CfnClient(args.cfn_dir)
-    cfn_client.build_cfn(os.path.join(args.cfn_dir,template_name), stack_name)
+    if args.cfn_launch == True:
+        # launch cfn template
+        stack_name = '-'.join(re.findall("([0-9a-zA-Z]+)",template_name)[:-1]+[datetime.datetime.now().strftime("%Y%m%d%H%M%S")])
+        cfn_client = CfnClient(args.cfn_dir)
+        cfn_client.build_cfn(os.path.join(args.cfn_dir,template_name), stack_name)

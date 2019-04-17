@@ -38,8 +38,8 @@ def requestUploadURL(event, context):
         "ansibleConfigFile": re.sub('.xls[x]?$', '.zip', s3_params["Key"])
     }
     headers = {
-        #'Access-Control-Allow-Origin': 'http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com'
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': 'http://kaiyuanwang.org'
+        #'Access-Control-Allow-Origin': '*'
     }
 
     response = {

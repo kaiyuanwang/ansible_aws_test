@@ -1,9 +1,9 @@
 # npm install --save serverless-finch
-# serverless-website2-kaiyuan: s3 bucket for static webserver. deletes upon sls client remove. automatically empty
+# kaiyuanwang.org: s3 bucket for static webserver. deletes upon sls client remove. automatically empty
 # serverless-website1-kaiyuan: s3 bucket for data processing, deletes upon sls remove. needs empty first
 # launch procedures:
 #       1. update lambda python script with static website url
-#              'Access-Control-Allow-Origin': 'http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com' 
+#              'Access-Control-Allow-Origin': 'http://kaiyuanwang.org.s3-website-ap-southeast-2.amazonaws.com' 
 #       2. launch lambda by "sls deploy", and get lambda url
 #       3. update client/dist/index with lambda url
 #               apiBaseURL = "https://0gqit0d8k5.execute-api.ap-southeast-2.amazonaws.com/dev"
@@ -19,7 +19,7 @@ plugins:
 custom:
   stage: ${opt:stage, self:provider.stage}
   client:
-    bucketName: serverless-website2-kaiyuan
+    bucketName: kaiyuanwang.org 
     distributionFolder: client/dist
 
 provider:
@@ -79,8 +79,8 @@ resources:
             - HEAD
             - DELETE
             AllowedOrigins:
-            #- "http://serverless-website2-kaiyuan.s3-website-ap-southeast-2.amazonaws.com"
-            - "*"
+            - "http://kaiyuanwang.org"
+            #- "*"
             AllowedHeaders:
             - "*"
     S3BucketConfigPolicy:

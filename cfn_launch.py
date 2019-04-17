@@ -163,7 +163,9 @@ class XshellAccess(object):
     @staticmethod
     def create(stack_name, control_ip):
         config_basename = stack_name+'.xsh'
-        #if not os.path.exists(config_basename):
+        config_file = os.path.join('C:\\Users', getpass.getuser(), 'Desktop', config_basename)
+        if os.path.exists(config_file):
+            return 0
         aws_config_template = 'C:\\Users\\kwang1\\Documents\\NetSarang\\Xshell\\Sessions\\AWS\\template.xsh'
         config_dir = os.path.dirname(aws_config_template)
         config_dict = {}
@@ -171,9 +173,10 @@ class XshellAccess(object):
         cf.read(aws_config_template)
         cf['CONNECTION']['Host'] = control_ip
 
-        config_basename = os.path.join('C:\\Users', getpass.getuser(), 'Desktop', config_basename)
-        with open(config_basename, 'w') as fh:
+        
+        with open(config_file, 'w') as fh:
             cf.write(fh)
+        os.system(config_file)
     @staticmethod
     def delete(stack_name):
         stack_name = os.path.join('C:\\Users', getpass.getuser(), 'Desktop', stack_name)
@@ -206,7 +209,7 @@ class CfnClient(object):
             json.dump(self.stack_info_dict, fh)
 
     @log()
-    def query_cfn_status(self, stack_id_list):
+    def query_cfn_status(self, stack_id_list, connect=False):
         # change to use *list
         logger.info(stack_id_list)
         stack_dict_tmp = {}
@@ -232,7 +235,7 @@ class CfnClient(object):
                 logger.info("stack_details['Outputs']:\n{0}".format(stack_details['Outputs']))
                 #print("ControlPublicIp: "+stack_output['ControlPublicIp'])
                 
-                if not stack_status.startswith("DELETE") and platform.system() == 'Windows':
+                if not stack_status.startswith("DELETE") and connect and platform.system() == 'Windows':
                     try:
                         XshellAccess.create(stack_name, stack_output['ControlPublicIp'])
                     except:
@@ -323,7 +326,7 @@ class CfnClient(object):
         
 
     def print_cfn_desc(self, stack_id_list):
-        stack_info_dict = self.query_cfn_status(stack_id_list)
+        stack_info_dict = self.query_cfn_status(stack_id_list, connect=True)
         if not stack_info_dict:
             return stack_info_dict
             
