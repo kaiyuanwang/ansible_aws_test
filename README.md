@@ -60,6 +60,7 @@ Functions:
 	6. Delete stack will delete Xshell access config file of the stack.
 	7. Serialize stack info data to cfn-StackInfo.json.
 	8. Serialize stack parameters to cfn-parameters.json with local ip information.
+	9. Xshell connect to control server when describe.
 
 # 4. Troposphere AWS template generator.
 Python script to generate cloudformations templates for ansible, serverless, docker, rfb stack types
